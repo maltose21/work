@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商品自动下架规则中心 V2</title>
+    <style>
+        :root {
+            --sidebar-bg: #001529;
+            --sidebar-text: #a6adb4;
+            --primary-color: #1890ff;
+            --bg-color: #f0f2f5;
+            --white: #ffffff;
+            --text-color: #333;
+            --border-color: #e8e8e8;
+            --danger-color: #ff4d4f;
+            --warning-color: #faad14;
+            --success-color: #52c41a;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        body { display: flex; background-color: var(--bg-color); height: 100vh; color: var(--text-color); }
+
+        /* Sidebar */
+        .sidebar { width: 256px; background-color: var(--sidebar-bg); color: var(--sidebar-text); flex-shrink: 0; display: flex; flex-direction: column; }
+        .logo { height: 64px; line-height: 64px; padding-left: 24px; font-size: 20px; font-weight: bold; color: var(--white); background-color: #002140; display: flex; align-items: center; }
+        .logo-icon { margin-right: 10px; font-size: 24px; }
+        .menu { margin-top: 10px; }
+        .menu-item { padding: 0 24px; height: 40px; line-height: 40px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; font-size: 14px; }
+        .menu-item:hover { color: var(--white); }
+        .menu-item.active { background-color: var(--primary-color); color: var(--white); }
+        .submenu { background-color: #000c17; }
+        .submenu .menu-item { padding-left: 48px; }
+        .menu-submenu-title { padding: 0 24px; height: 40px; line-height: 40px; cursor: pointer; color: var(--sidebar-text); display: flex; align-items: center; justify-content: space-between; }
+        .menu-submenu-title:hover { color: var(--white); }
+
+        /* Main Content */
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .header { height: 64px; background: var(--white); padding: 0 24px; display: flex; align-items: center; box-shadow: 0 1px 4px rgba(0,21,41,.08); font-size: 14px; color: #666; }
+        .breadcrumb { color: #999; }
+        .breadcrumb span:last-child { color: #333; font-weight: 500; }
+        .content-area { padding: 24px; overflow-y: auto; flex: 1; }
+        .card { background: var(--white); padding: 24px; border-radius: 2px; margin-bottom: 24px; }
+
+        /* Tabs */
+        .tabs-header { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 24px; }
+        .tab-item { padding: 12px 24px; cursor: pointer; font-size: 14px; font-weight: 500; color: #666; border-bottom: 2px solid transparent; transition: all 0.3s; }
+        .tab-item:hover { color: var(--primary-color); }
+        .tab-item.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+
+        /* Forms */
+        .search-form { display: flex; flex-wrap: wrap; gap: 24px; margin-bottom: 10px; }
+        .form-item { display: flex; align-items: center; }
+        .form-label { margin-right: 10px; font-size: 14px; color: #333; }
+        .form-input, .form-select { width: 200px; height: 32px; padding: 4px 11px; border: 1px solid var(--border-color); border-radius: 4px; outline: none; transition: all 0.3s; }
+        .form-input:hover, .form-select:hover { border-color: #40a9ff; }
+        .form-input:focus, .form-select:focus { border-color: var(--primary-color); box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2); }
+        
+        /* Buttons */
+        .btn { height: 32px; padding: 0 15px; border-radius: 4px; cursor: pointer; border: 1px solid var(--border-color); background: var(--white); color: var(--text-color); font-size: 14px; transition: all 0.3s; display: inline-flex; align-items: center; justify-content: center; }
+        .btn-primary { background: var(--primary-color); color: var(--white); border-color: var(--primary-color); }
+        .btn-primary:hover { background: #40a9ff; border-color: #40a9ff; }
+        .btn-reset { margin-left: 8px; }
+        .btn-reset:hover { color: var(--primary-color); border-color: var(--primary-color); }
+        
+        /* Table */
+        .table-container { width: 100%; overflow-x: auto; margin-top: 16px; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th { background: #fafafa; color: rgba(0,0,0,.85); font-weight: 500; text-align: left; padding: 16px; border-bottom: 1px solid var(--border-color); }
+        td { padding: 16px; border-bottom: 1px solid var(--border-color); color: #666; }
+        tr:hover td { background-color: #fafafa; }
+        
+        .status-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 8px; }
+        .status-active { background-color: var(--success-color); }
+        .status-inactive { background-color: #d9d9d9; }
+        
+        .action-link { color: var(--primary-color); cursor: pointer; margin-right: 10px; text-decoration: none; }
+        .action-link.delete { color: var(--danger-color); }
+        .action-link.toggle { color: var(--warning-color); }
+        
+        .pagination { display: flex; justify-content: flex-end; margin-top: 16px; align-items: center; font-size: 14px; }
+
+        /* Tags */
+        .rule-tag { display: inline-block; background: #f5f5f5; border: 1px solid #d9d9d9; border-radius: 2px; padding: 0 7px; font-size: 12px; margin-right: 4px; margin-bottom: 4px; color: rgba(0,0,0,.65); }
+        .rule-logic-or { color: #ff9800; font-weight: bold; font-size: 12px; margin: 0 4px; }
+
+        /* Modals */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.45); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal { width: 800px; background: var(--white); border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; flex-direction: column; max-height: 90vh; }
+        .modal-header { padding: 16px 24px; border-bottom: 1px solid var(--border-color); font-size: 16px; font-weight: 500; color: rgba(0,0,0,.85); display: flex; justify-content: space-between; }
+        .modal-body { padding: 24px; overflow-y: auto; }
+        .modal-footer { padding: 10px 16px; border-top: 1px solid var(--border-color); text-align: right; background: transparent; }
+        .modal-close { cursor: pointer; border: none; background: none; font-size: 16px; }
+
+        /* Rule Builder */
+        .rule-builder-item { background: #fafafa; border: 1px solid #e8e8e8; padding: 16px; margin-bottom: 16px; border-radius: 4px; position: relative; }
+        .rule-builder-header { display: flex; justify-content: space-between; margin-bottom: 12px; align-items: center; }
+        .rule-title { font-weight: 500; color: #333; }
+        .close-rule { color: #999; cursor: pointer; }
+        .close-rule:hover { color: var(--danger-color); }
+        .add-rule-btn { border-style: dashed; width: 100%; margin-top: 8px; }
+        .or-divider { text-align: center; margin: 10px 0; position: relative; }
+        .or-divider::before { content: ''; position: absolute; top: 50%; left: 0; width: 100%; height: 1px; background: #e8e8e8; z-index: 0; }
+        .or-text { background: #fff; padding: 0 10px; color: #ff9800; font-weight: bold; position: relative; z-index: 1; }
+
+        /* Toast */
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 2000; }
+        .toast { background: #fff; padding: 12px 24px; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 10px; display: flex; align-items: center; min-width: 300px; border-left: 4px solid #1890ff; opacity: 0; transform: translateX(100%); animation: slideIn 0.3s forwards; }
+        .toast.success { border-left-color: var(--success-color); }
+        .toast.error { border-left-color: var(--danger-color); }
+        .toast.warning { border-left-color: var(--warning-color); }
+        .toast-icon { margin-right: 12px; font-size: 16px; }
+        @keyframes slideIn { to { opacity: 1; transform: translateX(0); } }
+        @keyframes fadeOut { to { opacity: 0; transform: translateY(-10px); } }
+
+        /* Error & Loading */
+        .form-input.error, .form-select.error { border-color: var(--danger-color); background-color: #fff1f0; }
+        .error-msg { color: var(--danger-color); font-size: 12px; margin-top: 4px; display: none; padding-left: 4px; }
+        .form-input.error ~ .error-msg, .form-select.error ~ .error-msg { display: block; }
+        .btn.loading { position: relative; pointer-events: none; opacity: 0.7; }
+        .btn.loading::before { content: ''; position: absolute; width: 14px; height: 14px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 8px; left: 50%; margin-left: -9px; }
+        .btn.loading span { visibility: hidden; }
+    </style>
+</head>
+<body>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="sidebar">
+        <div class="logo"> <span class="logo-icon">⚡</span> 规则中心 </div>
+        <div class="menu">
+            <div class="menu-item"> <span>📊 数据中心</span> </div>
+            <div class="menu-submenu-title"> <span>⚙️ 系统管理</span> <span>▼</span> </div>
+            <div class="submenu">
+                <div class="menu-item"> 系统配置 </div>
+                <div class="menu-item active"> 自动下架规则 </div>
+                <div class="menu-item"> 操作日志 </div>
+            </div>
+            <div class="menu-item"> <span>🔔 告警中心</span> </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <div class="breadcrumb" id="breadcrumbText"> 系统管理 / <span>自动下架规则</span> </div>
+        </div>
+
+        <div class="content-area">
+            <div class="card">
+                <div class="tabs-header">
+                    <div class="tab-item active" onclick="switchTab('rules')" id="tabRules">规则配置</div>
+                    <div class="tab-item" onclick="switchTab('whitelist')" id="tabWhitelist">白名单管理</div>
+                </div>
+
+                <!-- RULES TAB -->
+                <div id="contentRules">
+                    <div class="search-form">
+                        <div class="form-item">
+                            <span class="form-label">订单类型:</span>
+                            <select class="form-select">
+                                <option value="">请选择</option>
+                                <option value="1">普通兑换单</option>
+                                <option value="2">自营 erp 订单</option>
+                                <option value="3">poperp 订单</option>
+                                <option value="4">erp0 元单</option>
+                            </select>
+                        </div>
+                        <div class="form-item">
+                            <span class="form-label">商品类型:</span>
+                            <select class="form-select">
+                                <option value="">请选择</option>
+                                <option value="1">京东商品</option>
+                                <option value="2">优惠券</option>
+                                <option value="3">虚拟商品</option>
+                                <option value="4">京豆</option>
+                                <option value="5">超市卡红包</option>
+                                <option value="6">京东寄件</option>
+                                <option value="7">京东健康问诊</option>
+                                <option value="8">京东读书</option>
+                                <option value="9">爱康国宾体检</option>
+                                <option value="10">科技券</option>
+                                <option value="11">PLUS异业</option>
+                                <option value="12">PLUS券包</option>
+                            </select>
+                        </div>
+                        <div class="form-item">
+                            <span class="form-label">规则ID:</span>
+                            <input type="text" class="form-input" placeholder="请输入">
+                        </div>
+                        <div class="form-item">
+                            <button class="btn btn-primary">查询</button>
+                            <button class="btn btn-reset">重置</button>
+                        </div>
+                    </div>
+
+                    <div class="action-bar" style="padding-top: 24px; border-top: 1px solid #e8e8e8;">
+                        <button class="btn btn-primary" onclick="openRuleModal()">+ 新建规则</button>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table id="rulesTable">
+                            <thead>
+                                <tr>
+                                    <th>规则ID</th>
+                                    <th>订单类型</th>
+                                    <th>商品类型</th>
+                                    <th style="width: 40%;">规则详情 (满足任意一项即下架)</th>
+                                    <th>状态</th>
+                                    <th>更新时间</th>
+                                    <th>操作人</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination" id="rulesPagination"></div>
+                </div>
+
+                <!-- WHITELIST TAB -->
+                <div id="contentWhitelist" style="display: none;">
+                    <div class="search-form">
+                        <div class="form-item">
+                            <span class="form-label">店铺 ID:</span>
+                            <input type="text" class="form-input" placeholder="请输入店铺ID">
+                        </div>
+                        <div class="form-item">
+                            <span class="form-label">SKU ID:</span>
+                            <input type="text" class="form-input" placeholder="请输入商品ID">
+                        </div>
+                        <div class="form-item">
+                            <button class="btn btn-primary">查询</button>
+                        </div>
+                    </div>
+
+                    <div class="action-bar" style="padding-top: 24px; border-top: 1px solid #e8e8e8;">
+                        <button class="btn btn-primary" onclick="openWhitelistModal()">+ 批量添加白名单</button>
+                        <span style="margin-left: 10px; color: #999; font-size: 12px;">* 白名单中的商品将豁免所有自动下架规则 (维度: 店铺 + SKU)</span>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table id="whitelistTable">
+                            <thead>
+                                <tr>
+                                    <th>店铺 ID</th>
+                                    <th>SKU ID</th>
+                                    <th>商品名称</th>
+                                    <th>备注说明</th>
+                                    <th>添加人</th>
+                                    <th>添加时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination" id="whitelistPagination"></div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Rule Modal -->
+    <div class="modal-overlay" id="ruleModal">
+        <div class="modal">
+            <div class="modal-header">
+                <span id="modalTitle">新建自动下架规则</span>
+                <button class="modal-close" onclick="closeRuleModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="search-form" style="display: block;">
+                    <div class="form-item" style="margin-bottom: 20px; align-items: flex-start;">
+                        <span class="form-label" style="width: 80px; text-align: right; margin-top: 6px;">订单类型:</span>
+                        <div style="flex: 1;">
+                            <select class="form-select" style="width: 100%;" id="modalOrderType">
+                                <option value="">请选择</option>
+                                <option value="普通兑换单">普通兑换单</option>
+                                <option value="自营 erp 订单">自营 erp 订单</option>
+                                <option value="poperp 订单">poperp 订单</option>
+                                <option value="erp0 元单">erp0 元单</option>
+                            </select>
+                            <div class="error-msg">请选择订单类型</div>
+                        </div>
+                    </div>
+                    <div class="form-item" style="margin-bottom: 20px; align-items: flex-start;">
+                        <span class="form-label" style="width: 80px; text-align: right; margin-top: 6px;">商品类型:</span>
+                        <div style="flex: 1;">
+                            <select class="form-select" style="width: 100%;" id="modalProductType">
+                                <option value="">请选择</option>
+                                <option value="京东商品">京东商品</option>
+                                <option value="优惠券">优惠券</option>
+                                <option value="虚拟商品">虚拟商品</option>
+                                <option value="京豆">京豆</option>
+                                <option value="超市卡红包">超市卡红包</option>
+                                <option value="京东寄件">京东寄件</option>
+                                <option value="京东健康问诊">京东健康问诊</option>
+                                <option value="京东读书">京东读书</option>
+                                <option value="爱康国宾体检">爱康国宾体检</option>
+                                <option value="科技券">科技券</option>
+                                <option value="PLUS异业">PLUS异业</option>
+                                <option value="PLUS券包">PLUS券包</option>
+                            </select>
+                            <div class="error-msg">请选择商品类型</div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 30px; border-top: 1px solid #e8e8e8; padding-top: 20px;">
+                        <h4 style="margin-bottom: 16px; color: #333;">下架策略配置 (满足任意条件触发)</h4>
+                        <div class="error-msg" id="ruleListError" style="margin-bottom: 10px;">请至少配置一条规则策略</div>
+                        
+                        <div id="ruleList"></div>
+
+                        <button class="btn add-rule-btn" onclick="showAddRuleMenu(this)">+ 添加策略 (OR)</button>
+                        <div id="addRuleMenu" style="display:none; position: absolute; background: #fff; border: 1px solid #eee; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 10; width: 200px; border-radius: 4px; margin-top: 5px;">
+                            <div class="menu-item" onclick="addRuleItem('code')" id="menuItem_code">🔴 错误码阻断</div>
+                            <div class="menu-item" onclick="addRuleItem('rate')" id="menuItem_rate">⚡ 高频失败熔断</div>
+                            <div class="menu-item" onclick="addRuleItem('total')" id="menuItem_total">📈 累计失败熔断</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-reset" onclick="closeRuleModal()">取消</button>
+                <button class="btn btn-primary" id="btnSaveRule" onclick="saveRule()"><span>确定</span></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Whitelist Modal -->
+    <div class="modal-overlay" id="whitelistModal">
+        <div class="modal" style="width: 600px;">
+            <div class="modal-header">
+                <span>批量添加白名单</span>
+                <button class="modal-close" onclick="closeWhitelistModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-item" style="margin-bottom: 10px;">
+                    <span class="form-label" style="width: 100px; text-align: right; align-self: flex-start; margin-top: 6px;">数据录入:</span>
+                    <div style="flex: 1;">
+                        <textarea class="form-input" id="whitelistBatchInput" style="width: 100%; height: 200px; padding: 12px; font-family: monospace; line-height: 1.5; font-size: 13px;" placeholder="请粘贴数据，每行一条。支持格式：&#10;1. 店铺ID, SKU ID (逗号分隔)&#10;2. 店铺ID  SKU ID (空格或Tab分隔)&#10;&#10;示例:&#10;1001, 100008348542&#10;2055  100012345678"></textarea>
+                        <div style="font-size: 12px; color: #666; margin-top: 8px; background: #f5f5f5; padding: 8px; border-radius: 4px;">
+                            💡 提示：支持从 Excel 直接复制两列数据 (店铺ID | SKU ID) 粘贴至此。
+                        </div>
+                    </div>
+                </div>
+                <div class="form-item" style="margin-bottom: 20px;">
+                    <span class="form-label" style="width: 100px; text-align: right; align-self: flex-start; margin-top: 6px;">统一备注:</span>
+                    <div style="flex: 1;">
+                        <textarea class="form-input" id="whitelistRemark" style="width: 100%; height: 60px; padding: 8px;" placeholder="请输入豁免原因 (如: 大促主推款)"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-reset" onclick="closeWhitelistModal()">取消</button>
+                <button class="btn btn-primary" id="btnSaveWhitelist" onclick="saveWhitelistBatch()">确定添加</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA STORE ---
+        let rulesData = [
+            { 
+                id: 1001, 
+                activity: '普通兑换单', 
+                product: '优惠券', 
+                descHTML: '<span class="rule-tag">Code IN [121]</span><span class="rule-logic-or">OR</span><span class="rule-tag">1分钟失败 > 1000次</span>',
+                status: 'active',
+                updateTime: '2024-05-20 14:30:00',
+                operator: 'wangxianhui6'
+            },
+            { 
+                id: 1002, 
+                activity: '自营 erp 订单', 
+                product: '京东商品', 
+                descHTML: '<span class="rule-tag">Code IN [234, 502]</span>',
+                status: 'active',
+                updateTime: '2024-05-21 09:15:00',
+                operator: 'lixuan128'
+            }
+        ];
+
+        let whitelistData = [
+            { shopId: '1001', skuId: '100008348542', name: 'Apple iPhone 15 Pro Max', remark: '大促核心主推款', operator: 'admin', time: '2024-06-01 10:00:00' },
+            { shopId: '2055', skuId: '100012345678', name: '京东E卡 1000元', remark: '战略合作商品', operator: 'system', time: '2024-06-02 11:20:00' }
+        ];
+
+        // --- INIT ---
+        window.onload = function() {
+            renderRulesTable();
+            renderWhitelistTable();
+        };
+
+        // --- COMMON UTILS ---
+        function showToast(msg, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            let icon = type === 'success' ? '✅' : (type === 'error' ? '❌' : '⚠️');
+            toast.innerHTML = `<span class="toast-icon">${icon}</span>${msg}`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.animation = 'fadeOut 0.3s forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function switchTab(tabName) {
+            const rulesContent = document.getElementById('contentRules');
+            const whitelistContent = document.getElementById('contentWhitelist');
+            const tabRules = document.getElementById('tabRules');
+            const tabWhitelist = document.getElementById('tabWhitelist');
+
+            if (tabName === 'rules') {
+                rulesContent.style.display = 'block';
+                whitelistContent.style.display = 'none';
+                tabRules.classList.add('active');
+                tabWhitelist.classList.remove('active');
+            } else {
+                rulesContent.style.display = 'none';
+                whitelistContent.style.display = 'block';
+                tabRules.classList.remove('active');
+                tabWhitelist.classList.add('active');
+            }
+        }
+
+        // --- RULES LOGIC ---
+        function renderRulesTable() {
+            const tbody = document.querySelector('#rulesTable tbody');
+            tbody.innerHTML = '';
+            
+            rulesData.forEach(rule => {
+                const tr = document.createElement('tr');
+                const statusHtml = rule.status === 'active' 
+                    ? '<span class="status-dot status-active"></span><span class="status-text">启用</span>'
+                    : '<span class="status-dot status-inactive"></span><span class="status-text">禁用</span>';
+                
+                const toggleAction = rule.status === 'active' 
+                    ? `<a class="action-link toggle" onclick="toggleRuleStatus(${rule.id})">禁用</a>`
+                    : `<a class="action-link" onclick="toggleRuleStatus(${rule.id})">启用</a>`;
+
+                tr.innerHTML = `
+                    <td>${rule.id}</td>
+                    <td>${rule.activity}</td>
+                    <td>${rule.product}</td>
+                    <td>${rule.descHTML}</td>
+                    <td>${statusHtml}</td>
+                    <td>${rule.updateTime}</td>
+                    <td>${rule.operator}</td>
+                    <td>
+                        ${toggleAction}
+                        <a class="action-link" onclick="showToast('原型演示：编辑功能暂未实现', 'warning')">编辑</a>
+                        <a class="action-link delete" onclick="deleteRule(${rule.id})">删除</a>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            document.getElementById('rulesPagination').innerHTML = `<span>共搜索到 ${rulesData.length} 条数据</span>`;
+        }
+
+        function openRuleModal() {
+            document.getElementById('modalTitle').textContent = '新建自动下架规则';
+            document.getElementById('modalOrderType').value = '';
+            document.getElementById('modalProductType').value = '';
+            document.getElementById('ruleList').innerHTML = '';
+            document.querySelectorAll('.error-msg').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.error').forEach(el => el.classList.remove('error'));
+            addRuleItem('code'); // Default item
+            document.getElementById('ruleModal').style.display = 'flex';
+        }
+
+        function closeRuleModal() { document.getElementById('ruleModal').style.display = 'none'; }
+
+        function toggleRuleStatus(id) {
+            const rule = rulesData.find(r => r.id === id);
+            if (rule) {
+                const action = rule.status === 'active' ? '禁用' : '启用';
+                if (confirm(`确定要${action}该规则吗？`)) {
+                    rule.status = rule.status === 'active' ? 'inactive' : 'active';
+                    renderRulesTable();
+                    showToast(`规则已${action}`, 'success');
+                }
+            }
+        }
+
+        function deleteRule(id) {
+            if(confirm('确定要删除该规则吗？删除后将立即停止监控！')) {
+                rulesData = rulesData.filter(r => r.id !== id);
+                renderRulesTable();
+                showToast('规则已删除', 'success');
+            }
+        }
+
+        // --- RULE BUILDER ---
+        function showAddRuleMenu(btn) {
+            const menu = document.getElementById('addRuleMenu');
+            if (menu.style.display === 'block') {
+                menu.style.display = 'none';
+            } else {
+                // Mutex logic
+                const currentTypes = Array.from(document.querySelectorAll('.rule-builder-item')).map(item => item.dataset.type);
+                const updateMenuItem = (id, type) => {
+                    const el = document.getElementById(id);
+                    if (currentTypes.includes(type)) {
+                        el.style.opacity = '0.5';
+                        el.style.pointerEvents = 'none';
+                        if (!el.innerText.includes('(已添加)')) el.innerText += ' (已添加)';
+                    } else {
+                        el.style.opacity = '1';
+                        el.style.pointerEvents = 'auto';
+                        el.innerText = el.innerText.replace(' (已添加)', '');
+                    }
+                };
+                updateMenuItem('menuItem_code', 'code');
+                updateMenuItem('menuItem_rate', 'rate');
+                updateMenuItem('menuItem_total', 'total');
+                menu.style.display = 'block';
+            }
+        }
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.add-rule-btn') && !e.target.closest('#addRuleMenu')) {
+                document.getElementById('addRuleMenu').style.display = 'none';
+            }
+        });
+
+        function addRuleItem(type) {
+            const ruleList = document.getElementById('ruleList');
+            const items = ruleList.querySelectorAll('.rule-builder-item');
+            
+            if (items.length > 0) {
+                const divider = document.createElement('div');
+                divider.className = 'or-divider';
+                divider.innerHTML = '<span class="or-text">OR</span>';
+                ruleList.appendChild(divider);
+            }
+
+            const div = document.createElement('div');
+            div.className = 'rule-builder-item';
+            div.dataset.type = type;
+
+            let content = '';
+            if (type === 'code') {
+                content = `
+                    <div class="rule-builder-header"><span class="rule-title">🔴 错误码阻断</span><span class="close-rule" onclick="removeRuleItem(this)">✕</span></div>
+                    <div class="form-item"><span class="form-label">监测错误码:</span><div style="flex:1"><input type="text" class="form-input code-input" style="width:100%" placeholder="如: 121, 500"><div class="error-msg">请输入有效的错误码</div></div></div>
+                `;
+            } else if (type === 'rate') {
+                content = `
+                    <div class="rule-builder-header"><span class="rule-title">⚡ 高频失败熔断</span><span class="close-rule" onclick="removeRuleItem(this)">✕</span></div>
+                    <div class="form-item"><input type="number" class="form-input time-input" value="60" style="width:80px;margin-right:8px"><span class="form-label">秒内，失败 ></span><input type="number" class="form-input count-input" value="1000" style="width:100px"><span class="form-label">次</span></div>
+                `;
+            } else if (type === 'total') {
+                content = `
+                    <div class="rule-builder-header"><span class="rule-title">📈 累计失败熔断</span><span class="close-rule" onclick="removeRuleItem(this)">✕</span></div>
+                    <div class="form-item"><span class="form-label">累计失败 ></span><input type="number" class="form-input total-input" value="10000" style="width:150px"><span class="form-label">次</span></div>
+                `;
+            }
+            div.innerHTML = content;
+            ruleList.appendChild(div);
+            document.getElementById('addRuleMenu').style.display = 'none';
+        }
+
+        function removeRuleItem(btn) {
+            const item = btn.closest('.rule-builder-item');
+            const prev = item.previousElementSibling; 
+            const next = item.nextElementSibling;
+            item.remove();
+            if (prev && prev.classList.contains('or-divider')) prev.remove();
+            else if (next && next.classList.contains('or-divider') && !item.previousElementSibling) next.remove();
+        }
+
+        function saveRule() {
+            // Validation
+            const actType = document.getElementById('modalOrderType');
+            const prodType = document.getElementById('modalProductType');
+            let isValid = true;
+
+            if (!actType.value) { actType.classList.add('error'); isValid = false; } else actType.classList.remove('error');
+            if (!prodType.value) { prodType.classList.add('error'); isValid = false; } else prodType.classList.remove('error');
+
+            if (actType.value && prodType.value) {
+                const exists = rulesData.find(r => r.activity === actType.value && r.product === prodType.value);
+                if (exists) {
+                    showToast('该【订单类型 + 商品类型】组合已存在规则', 'error');
+                    return;
+                }
+            }
+
+            const items = document.querySelectorAll('.rule-builder-item');
+            if (items.length === 0) {
+                document.getElementById('ruleListError').style.display = 'block';
+                return;
+            }
+            document.getElementById('ruleListError').style.display = 'none';
+
+            if (!isValid) return;
+
+            // Submit
+            const btn = document.getElementById('btnSaveRule');
+            btn.classList.add('loading');
+            
+            setTimeout(() => {
+                let descParts = [];
+                items.forEach(item => {
+                    if (item.dataset.type === 'code') descParts.push(`<span class="rule-tag">Code IN [${item.querySelector('.code-input').value}]</span>`);
+                    if (item.dataset.type === 'rate') descParts.push(`<span class="rule-tag">Rate Limit</span>`);
+                    if (item.dataset.type === 'total') descParts.push(`<span class="rule-tag">Total Limit</span>`);
+                });
+
+                rulesData.unshift({
+                    id: 1000 + rulesData.length + 1,
+                    activity: actType.value,
+                    product: prodType.value,
+                    descHTML: descParts.join('<span class="rule-logic-or">OR</span>'),
+                    status: 'active',
+                    updateTime: new Date().toISOString().slice(0, 19).replace('T', ' '),
+                    operator: 'current_user'
+                });
+                
+                renderRulesTable();
+                showToast('规则创建成功', 'success');
+                setTimeout(() => showToast('配置已下发，规则实时生效中', 'success'), 1000);
+                btn.classList.remove('loading');
+                closeRuleModal();
+            }, 800);
+        }
+
+        // --- WHITELIST LOGIC ---
+        function renderWhitelistTable() {
+            const tbody = document.querySelector('#whitelistTable tbody');
+            tbody.innerHTML = '';
+            whitelistData.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${item.shopId}</td>
+                    <td>${item.skuId}</td>
+                    <td>${item.name}</td>
+                    <td>${item.remark}</td>
+                    <td>${item.operator}</td>
+                    <td>${item.time}</td>
+                    <td><a class="action-link delete" onclick="deleteWhitelist(${index})">移出白名单</a></td>
+                `;
+                tbody.appendChild(tr);
+            });
+            document.getElementById('whitelistPagination').innerHTML = `<span>共搜索到 ${whitelistData.length} 条数据</span>`;
+        }
+
+        function openWhitelistModal() {
+            document.getElementById('whitelistBatchInput').value = '';
+            document.getElementById('whitelistRemark').value = '';
+            document.getElementById('whitelistBatchInput').classList.remove('error');
+            document.getElementById('whitelistModal').style.display = 'flex';
+        }
+
+        function closeWhitelistModal() { document.getElementById('whitelistModal').style.display = 'none'; }
+
+        function saveWhitelistBatch() {
+            const inputEl = document.getElementById('whitelistBatchInput');
+            const rawText = inputEl.value.trim();
+            if (!rawText) { inputEl.classList.add('error'); showToast('请输入数据', 'error'); return; }
+            inputEl.classList.remove('error');
+
+            const lines = rawText.split('\n');
+            let validCount = 0;
+            const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+            const remark = document.getElementById('whitelistRemark').value.trim() || '-';
+
+            lines.forEach(line => {
+                const parts = line.split(/[,\t\s]+/);
+                if (parts.length >= 2) {
+                    const shopId = parts[0].trim();
+                    const skuId = parts[1].trim();
+                    if (/^\d+$/.test(shopId) && /^\d+$/.test(skuId)) {
+                        if (!whitelistData.some(i => i.shopId === shopId && i.skuId === skuId)) {
+                            whitelistData.unshift({
+                                shopId, skuId, name: '测试商品 ' + skuId.slice(-4), remark, operator: 'current_user', time: now
+                            });
+                            validCount++;
+                        }
+                    }
+                }
+            });
+
+            if (validCount > 0) {
+                renderWhitelistTable();
+                showToast(`成功添加 ${validCount} 条白名单`, 'success');
+                closeWhitelistModal();
+            } else {
+                showToast('未添加任何数据，可能是格式错误或重复', 'warning');
+            }
+        }
+
+        function deleteWhitelist(index) {
+            if(confirm('确定要移除该白名单吗？')) {
+                whitelistData.splice(index, 1);
+                renderWhitelistTable();
+                showToast('已移除', 'success');
+            }
+        }
+    </script>
+</body>
+</html>
