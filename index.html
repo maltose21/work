@@ -457,7 +457,7 @@
                     <td>${rule.operator}</td>
                     <td>
                         ${toggleAction}
-                        <a class="action-link" onclick="showToast('原型演示：编辑功能暂未实现', 'warning')">编辑</a>
+                        <a class="action-link" onclick="openRuleModal(${rule.id})">编辑</a>
                         <a class="action-link delete" onclick="deleteRule(${rule.id})">删除</a>
                     </td>
                 `;
