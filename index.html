@@ -466,14 +466,57 @@
             document.getElementById('rulesPagination').innerHTML = `<span>共搜索到 ${rulesData.length} 条数据</span>`;
         }
 
-        function openRuleModal() {
-            document.getElementById('modalTitle').textContent = '新建自动下架规则';
-            document.getElementById('modalOrderType').value = '';
-            document.getElementById('modalProductType').value = '';
-            document.getElementById('ruleList').innerHTML = '';
+        function openRuleModal(id = null) {
+            editingRuleId = id;
+            const modalTitle = document.getElementById('modalTitle');
+            const actType = document.getElementById('modalOrderType');
+            const prodType = document.getElementById('modalProductType');
+            const ruleList = document.getElementById('ruleList');
+            
+            // Clear previous state
+            ruleList.innerHTML = '';
             document.querySelectorAll('.error-msg').forEach(el => el.style.display = 'none');
             document.querySelectorAll('.error').forEach(el => el.classList.remove('error'));
-            addRuleItem('code'); // Default item
+
+            if (id) {
+                // Edit Mode
+                // Ensure loose comparison or convert id to number as HTML attributes are strings
+                const rule = rulesData.find(r => r.id == id); 
+                
+                if (rule) {
+                    modalTitle.textContent = '编辑自动下架规则';
+                    actType.value = rule.activity;
+                    prodType.value = rule.product;
+                    
+                    // Disable keys in edit mode
+                    actType.disabled = true;
+                    prodType.disabled = true;
+                    
+                    // Restore strategies
+                    if (rule.strategies && rule.strategies.length > 0) {
+                        rule.strategies.forEach(s => {
+                            addRuleItem(s.type, s);
+                        });
+                    } else {
+                        // Fallback if no strategies (shouldn't happen in prod)
+                        addRuleItem('code');
+                    }
+                } else {
+                    console.error('Rule not found:', id);
+                    showToast('未找到该规则数据', 'error');
+                    return;
+                }
+            } else {
+                // Create Mode
+                modalTitle.textContent = '新建自动下架规则';
+                actType.value = '';
+                prodType.value = '';
+                actType.disabled = false;
+                prodType.disabled = false;
+                
+                addRuleItem('code'); // Default item
+            }
+            
             document.getElementById('ruleModal').style.display = 'flex';
         }
 
