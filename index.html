@@ -153,67 +153,74 @@
                 </div>
 
                 <!-- RULES TAB -->
-                <div id="contentRules">
-                    <div class="search-form">
-                        <div class="form-item">
-                            <span class="form-label">订单类型:</span>
-                            <select class="form-select">
-                                <option value="">请选择</option>
-                                <option value="1">普通兑换单</option>
-                                <option value="2">自营 erp 订单</option>
-                                <option value="3">poperp 订单</option>
-                                <option value="4">erp0 元单</option>
-                            </select>
-                        </div>
-                        <div class="form-item">
-                            <span class="form-label">商品类型:</span>
-                            <select class="form-select">
-                                <option value="">请选择</option>
-                                <option value="1">京东商品</option>
-                                <option value="2">优惠券</option>
-                                <option value="3">虚拟商品</option>
-                                <option value="4">京豆</option>
-                                <option value="5">超市卡红包</option>
-                                <option value="6">京东寄件</option>
-                                <option value="7">京东健康问诊</option>
-                                <option value="8">京东读书</option>
-                                <option value="9">爱康国宾体检</option>
-                                <option value="10">科技券</option>
-                                <option value="11">PLUS异业</option>
-                                <option value="12">PLUS券包</option>
-                            </select>
-                        </div>
-                        <div class="form-item">
-                            <span class="form-label">规则ID:</span>
-                            <input type="text" class="form-input" placeholder="请输入">
-                        </div>
-                        <div class="form-item">
-                            <button class="btn btn-primary">查询</button>
-                            <button class="btn btn-reset">重置</button>
-                        </div>
+                <div class="search-form">
+                    <div class="form-item">
+                        <span class="form-label">订单类型</span>
+                        <select class="form-select">
+                            <option value="">全部</option>
+                            <option value="1">普通兑换单</option>
+                            <option value="2">自营 erp 订单</option>
+                            <option value="3">poperp 订单</option>
+                            <option value="4">erp0 元单</option>
+                        </select>
                     </div>
+                    <div class="form-item">
+                        <span class="form-label">商品类型</span>
+                        <select class="form-select">
+                            <option value="">全部</option>
+                            <option value="1">京东商品</option>
+                            <option value="2">优惠券</option>
+                            <option value="3">虚拟商品</option>
+                            <option value="4">京豆</option>
+                            <option value="5">超市卡红包</option>
+                            <option value="6">京东寄件</option>
+                            <option value="7">京东健康问诊</option>
+                            <option value="8">京东读书</option>
+                            <option value="9">爱康国宾体检</option>
+                            <option value="10">科技券</option>
+                            <option value="11">PLUS异业</option>
+                            <option value="12">PLUS券包</option>
+                        </select>
+                    </div>
+                    <div class="form-item">
+                        <span class="form-label">规则ID</span>
+                        <input type="text" class="form-input" placeholder="请输入规则ID">
+                    </div>
+                    <div class="form-item" style="flex-direction: row; align-items: flex-end;">
+                        <button class="btn btn-primary">查询</button>
+                        <button class="btn btn-reset">重置</button>
+                    </div>
+                </div>
 
-                    <div class="action-bar" style="padding-top: 24px; border-top: 1px solid #e8e8e8;">
-                        <button class="btn btn-primary" onclick="openRuleModal()">+ 新建规则</button>
+                <div class="action-bar" style="padding-top: 24px; border-top: 1px solid #f0f0f0; margin-top: 24px;">
+                    <button class="btn btn-primary" onclick="openRuleModal()">+ 新建规则</button>
+                </div>
+                
+                <div class="table-container">
+                    <table id="rulesTable">
+                        <thead>
+                            <tr>
+                                <th>规则ID</th>
+                                <th>订单类型</th>
+                                <th>商品类型</th>
+                                <th style="width: 40%;">规则详情 
+                                    <div class="tooltip">ⓘ
+                                        <span class="tooltip-text">满足列表中的任意一项策略即触发下架 (OR 逻辑)</span>
+                                    </div>
+                                </th>
+                                <th>状态</th>
+                                <th>更新时间</th>
+                                <th>操作人</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                    <div id="rulesEmpty" class="empty-state">
+                        <div class="empty-icon">📭</div>
+                        <div>暂无规则数据</div>
                     </div>
-                    
-                    <div class="table-container">
-                        <table id="rulesTable">
-                            <thead>
-                                <tr>
-                                    <th>规则ID</th>
-                                    <th>订单类型</th>
-                                    <th>商品类型</th>
-                                    <th style="width: 40%;">规则详情 (满足任意一项即下架)</th>
-                                    <th>状态</th>
-                                    <th>更新时间</th>
-                                    <th>操作人</th>
-                                    <th>操作</th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
+                </div>
                     <div class="pagination" id="rulesPagination"></div>
                 </div>
 
