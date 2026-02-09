@@ -532,7 +532,7 @@
             }
         });
 
-        function addRuleItem(type) {
+        function addRuleItem(type, data = null) {
             const ruleList = document.getElementById('ruleList');
             const items = ruleList.querySelectorAll('.rule-builder-item');
             
@@ -548,20 +548,26 @@
             div.dataset.type = type;
 
             let content = '';
+            // Pre-fill values if data exists
+            const valCode = data && data.type === 'code' ? data.value : '';
+            const valTime = data && data.type === 'rate' ? data.time : '60';
+            const valCount = data && data.type === 'rate' ? data.count : '1000';
+            const valTotal = data && data.type === 'total' ? data.count : '10000';
+
             if (type === 'code') {
                 content = `
-                    <div class="rule-builder-header"><span class="rule-title">🔴 错误码阻断</span><span class="close-rule" onclick="removeRuleItem(this)">✕</span></div>
-                    <div class="form-item"><span class="form-label">监测错误码:</span><div style="flex:1"><input type="text" class="form-input code-input" style="width:100%" placeholder="如: 121, 500"><div class="error-msg">请输入有效的错误码</div></div></div>
+                    <div class="rule-builder-header"><span class="rule-title"><span class="rule-title-icon">🔴</span>错误码阻断</span><span class="close-rule" onclick="removeRuleItem(this)">✕</span></div>
+                    <div class="form-item"><span class="form-label">监测错误码:</span><div style="flex:1"><input type="text" class="form-input code-input" style="width:100%" placeholder="如: 121, 500" value="${valCode}"><div class="error-msg">请输入有效的错误码</div></div></div>
                 `;
             } else if (type === 'rate') {
                 content = `
-                    <div class="rule-builder-header"><span class="rule-title">⚡ 高频失败熔断</span><span class="close-rule" onclick="removeRuleItem(this)">✕</span></div>
-                    <div class="form-item"><input type="number" class="form-input time-input" value="60" style="width:80px;margin-right:8px"><span class="form-label">秒内，失败 ></span><input type="number" class="form-input count-input" value="1000" style="width:100px"><span class="form-label">次</span></div>
+                    <div class="rule-builder-header"><span class="rule-title"><span class="rule-title-icon">⚡</span>高频失败熔断</span><span class="close-rule" onclick="removeRuleItem(this)">✕</span></div>
+                    <div class="form-item" style="flex-direction:row; align-items:center"><input type="number" class="form-input time-input" value="${valTime}" style="width:80px;margin-right:8px"><span class="form-label">秒内，失败 ></span><input type="number" class="form-input count-input" value="${valCount}" style="width:100px"><span class="form-label">次</span></div>
                 `;
             } else if (type === 'total') {
                 content = `
-                    <div class="rule-builder-header"><span class="rule-title">📈 累计失败熔断</span><span class="close-rule" onclick="removeRuleItem(this)">✕</span></div>
-                    <div class="form-item"><span class="form-label">累计失败 ></span><input type="number" class="form-input total-input" value="10000" style="width:150px"><span class="form-label">次</span></div>
+                    <div class="rule-builder-header"><span class="rule-title"><span class="rule-title-icon">📈</span>累计失败熔断</span><span class="close-rule" onclick="removeRuleItem(this)">✕</span></div>
+                    <div class="form-item" style="flex-direction:row; align-items:center"><span class="form-label">累计失败 ></span><input type="number" class="form-input total-input" value="${valTotal}" style="width:150px"><span class="form-label">次</span></div>
                 `;
             }
             div.innerHTML = content;
@@ -587,7 +593,8 @@
             if (!actType.value) { actType.classList.add('error'); isValid = false; } else actType.classList.remove('error');
             if (!prodType.value) { prodType.classList.add('error'); isValid = false; } else prodType.classList.remove('error');
 
-            if (actType.value && prodType.value) {
+            // Duplicate check (Only for new rules)
+            if (!editingRuleId && actType.value && prodType.value) {
                 const exists = rulesData.find(r => r.activity === actType.value && r.product === prodType.value);
                 if (exists) {
                     showToast('该【订单类型 + 商品类型】组合已存在规则', 'error');
@@ -609,25 +616,56 @@
             btn.classList.add('loading');
             
             setTimeout(() => {
-                let descParts = [];
+                let strategies = [];
                 items.forEach(item => {
-                    if (item.dataset.type === 'code') descParts.push(`<span class="rule-tag">Code IN [${item.querySelector('.code-input').value}]</span>`);
-                    if (item.dataset.type === 'rate') descParts.push(`<span class="rule-tag">Rate Limit</span>`);
-                    if (item.dataset.type === 'total') descParts.push(`<span class="rule-tag">Total Limit</span>`);
+                    if (item.dataset.type === 'code') {
+                        strategies.push({ type: 'code', value: item.querySelector('.code-input').value });
+                    }
+                    if (item.dataset.type === 'rate') {
+                        strategies.push({ 
+                            type: 'rate', 
+                            time: item.querySelector('.time-input').value,
+                            count: item.querySelector('.count-input').value
+                        });
+                    }
+                    if (item.dataset.type === 'total') {
+                        strategies.push({ 
+                            type: 'total', 
+                            count: item.querySelector('.total-input').value
+                        });
+                    }
                 });
 
-                rulesData.unshift({
-                    id: 1000 + rulesData.length + 1,
-                    activity: actType.value,
-                    product: prodType.value,
-                    descHTML: descParts.join('<span class="rule-logic-or">OR</span>'),
-                    status: 'active',
-                    updateTime: new Date().toISOString().slice(0, 19).replace('T', ' '),
-                    operator: 'current_user'
-                });
+                const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+                const actLabel = actType.options[actType.selectedIndex].text;
+                const prodLabel = prodType.options[prodType.selectedIndex].text;
+
+                if (editingRuleId) {
+                    // Update existing
+                    const ruleIndex = rulesData.findIndex(r => r.id === editingRuleId);
+                    if (ruleIndex > -1) {
+                        rulesData[ruleIndex].strategies = strategies;
+                        rulesData[ruleIndex].updateTime = now;
+                        // Activity/Product not changed as they are keys
+                        showToast('规则更新成功', 'success');
+                    }
+                } else {
+                    // Create new
+                    rulesData.unshift({
+                        id: 1000 + rulesData.length + 1,
+                        activity: actType.value,
+                        product: prodType.value,
+                        activityLabel: actLabel,
+                        productLabel: prodLabel,
+                        strategies: strategies,
+                        status: 'active',
+                        updateTime: now,
+                        operator: 'current_user'
+                    });
+                    showToast('规则创建成功', 'success');
+                }
                 
                 renderRulesTable();
-                showToast('规则创建成功', 'success');
                 setTimeout(() => showToast('配置已下发，规则实时生效中', 'success'), 1000);
                 btn.classList.remove('loading');
                 closeRuleModal();
